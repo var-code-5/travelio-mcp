@@ -1,5 +1,6 @@
-from typing import Dict, List
-from mcp.server.fastmcp import FastMCP  # Use FastMCP instead of MCPServer
+from typing import Dict, List, Any, Optional
+from mcp.server.fastmcp import Context
+from mcp.server.fastmcp import FastMCP
 from app.services.destination_service import DestinationService
 from app.services.attraction_service import AttractionService
 from app.services.hotel_service import HotelService
@@ -7,7 +8,7 @@ from app.services.itinerary_service import ItineraryService
 from app.core.clustering import AttractionClusterer
 from app.core.itinerary_planner import ItineraryPlanner
 
-# Create an MCP server
+# Initialize FastMCP server
 mcp = FastMCP("Travelio")
 
 # Initialize services
@@ -18,39 +19,64 @@ itinerary_service = ItineraryService()
 clusterer = AttractionClusterer()
 planner = ItineraryPlanner()
 
-# Define tools
 @mcp.tool()
-async def get_destinations(search_term: str = None) -> List[Dict]:
-    """Get all destinations or search by name."""
+async def get_destinations(search_term: Optional[str] = None) -> List[Dict]:
+    """Get all destinations or search by name.
+    
+    Args:
+        search_term: Optional search term to filter destinations
+    """
     return await destination_service.get_destinations(search_term)
 
 @mcp.tool()
-async def get_attractions(destination_id: str, filters: Dict = None) -> List[Dict]:
-    """Get attractions for a destination."""
-    if not destination_id:
-        raise ValueError("destination_id is required")
-    return await attraction_service.get_attractions(destination_id, filters or {})
+async def get_attractions(destination_id: int, filters: Dict = {}) -> List[Dict]:
+    """Get attractions for a destination.
+    
+    Args:
+        destination_id: ID of the destination
+        filters: Optional filters to apply (categories, ratings, etc.)
+    """
+    return await attraction_service.get_attractions(destination_id, filters)
 
 @mcp.tool()
-async def get_hotels(destination_id: str, filters: Dict = None) -> List[Dict]:
-    """Get hotels in a destination area."""
-    if not destination_id:
-        raise ValueError("destination_id is required")
-    return await hotel_service.get_hotels(destination_id, filters or {})
+async def get_hotels(destination_id: int, filters: Dict = {}) -> List[Dict]:
+    """Get hotels in a destination area.
+    
+    Args:
+        destination_id: ID of the destination
+        filters: Optional filters to apply (price, ratings, amenities, etc.)
+    """
+    return await hotel_service.get_hotels(destination_id, filters)
 
 @mcp.tool()
 async def cluster_attractions(attractions: List[Dict], num_days: int) -> Dict[int, List[Dict]]:
-    """Cluster attractions based on proximity for multi-day planning."""
-    if not attractions or not num_days:
-        raise ValueError("attractions and num_days are required")
+    """Cluster attractions based on proximity for multi-day planning.
+    
+    Args:
+        attractions: List of attraction objects
+        num_days: Number of days for the trip
+    """
     return clusterer.cluster_attractions(attractions, num_days)
 
 @mcp.tool()
-async def create_itinerary(destination_id: str, num_days: int, start_date: str, attractions: List[Dict] = None, user_id: str = None, hotel_id: str = None) -> Dict:
-    """Create a new itinerary."""
-    if not destination_id or not num_days or not start_date:
-        raise ValueError("destination_id, num_days, and start_date are required")
+async def create_itinerary(
+    destination_id: int,
+    num_days: int,
+    start_date: str,
+    attractions: List[Dict] = None,
+    user_id: Optional[int] = None,
+    hotel_id: Optional[int] = None
+) -> Dict:
+    """Create a new itinerary.
     
+    Args:
+        destination_id: ID of the destination
+        num_days: Number of days for the trip
+        start_date: Start date of the trip (format: YYYY-MM-DD)
+        attractions: Optional list of attractions to include
+        user_id: Optional user ID
+        hotel_id: Optional hotel ID
+    """
     # If no attractions provided, get top attractions
     if not attractions:
         attractions = await attraction_service.get_top_attractions(destination_id, num_days * 3)
@@ -86,18 +112,20 @@ async def create_itinerary(destination_id: str, num_days: int, start_date: str, 
     return itinerary
 
 @mcp.tool()
-async def get_itinerary(itinerary_id: str) -> Dict:
-    """Get an existing itinerary by ID."""
-    if not itinerary_id:
-        raise ValueError("itinerary_id is required")
+async def get_itinerary(itinerary_id: int) -> Dict:
+    """Get an existing itinerary by ID.
+    
+    Args:
+        itinerary_id: ID of the itinerary to retrieve
+    """
     return await itinerary_service.get_itinerary(itinerary_id)
 
-# Define a resource
 @mcp.resource("greeting://{name}")
 def get_greeting(name: str) -> str:
     """Get a personalized greeting."""
     return f"Hello, {name}!"
 
-def create_server():
-    """Create and return the FastMCP server instance."""
-    return mcp
+if __name__ == "__main__":
+    # Initialize and run the server
+    mcp.run(transport='stdio')
+

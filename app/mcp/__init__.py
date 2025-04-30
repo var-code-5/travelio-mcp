@@ -1,3 +1,3 @@
-from app.mcp.server import create_server
+from app.mcp.server import mcp
 
-__all__ = ["create_server"]
+__all__ = ["mcp"]

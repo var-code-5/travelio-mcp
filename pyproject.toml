@@ -27,6 +27,11 @@ dependencies = [
     "geopy>=2.4.1", # For geospatial calculations
     "httpx>=0.25.0", # For HTTP requests
     "python-dotenv>=1.1.0",
+    "google-generativeai>=0.8.5",
+    "mcp-use>=1.2.8",
+    "fastembed>=0.6.1",
+    "google-genai>=1.12.1",
+    "langchain-openai>=0.3.14",
 ]
 
 [project.optional-dependencies]
